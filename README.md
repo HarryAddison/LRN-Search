@@ -9,6 +9,7 @@ The aim of the project was to identify luninous red nova (LRN) progenitors using
 ## Code Details
 ### Scripts
 > lrne_search_functions.py:
+      
       Contains the functions used in all other scripts
 
 > progenitor_selection.py:
@@ -24,13 +25,15 @@ The aim of the project was to identify luninous red nova (LRN) progenitors using
 
         File Name: input_variables.txt
         
-        Contains: List of input variables such as file paths and directories that correspond to where data should be read from/written to. You may change the variables                   within this file.
+        Contains: List of input variables such as file paths and directories that correspond to where data should be read from/written to. 
+        You may change the variables within this file.
         
 > Training Data Set:
 
       File Name: train_data_set.fits
       
-      Contains: Observational data from Gaia DR2 used to train the Gaussian mixture model. This data is provided in the repositry, but if you wish to construct your                   own data set it must consist of the specific columns as outlined below:
+      Contains: Observational data from Gaia DR2 used to train the Gaussian mixture model. This data is provided in the repositry,
+                but if you wish to construct your own data set it must consist of the specific columns as outlined below:
       
                 Column Name : Descrition 
                 
@@ -46,7 +49,8 @@ The aim of the project was to identify luninous red nova (LRN) progenitors using
 
       File Name: fit_data_set.fits
       
-      Contains: Observational data from Gaia EDR3 used to select the progenitor systems from. This data is provided in the repositry, but if you wish to construct your                 own data set it must consist of the specific columns as outlined below:
+      Contains: Observational data from Gaia EDR3 used to select the progenitor systems from. This data is provided in the repositry, 
+                but if you wish to construct your own data set it must consist of the specific columns as outlined below:
       
                 Column Name : Description
                 
@@ -76,40 +80,69 @@ The aim of the project was to identify luninous red nova (LRN) progenitors using
       
 
 ## File Structure
-> Project 
-      >> Input
-            >>> input_variables.txt
-            >>> Data
-                   >>>> Gaia-Data
-                          >>>>> train_data_set.fits
-                          >>>>> fit_data_set.fits
-                   >>>> Stellar-Evo-Data
-                            >>>>> MIST Stellar Evolutionary Track files
-      >> Output
-            >>> Data
-                   >>>> files output by the code
-            >>> Figures
-                   >>>> saved figures
-      >> Scripts
-            >>> lrne_search_functions.py
-            >>> progenitor_selection.py
-            >>> Model-Parameter-Selection
-                   >>>> 
+
+      > Project 
+
+            >> Input
+
+                  >>> input_variables.txt
+
+                  >>> Data
+
+                        >>>> Gaia-Data
+
+                              >>>>> train_data_set.fits
+
+                              >>>>> fit_data_set.fits
+
+                         >>>> Stellar-Evo-Data
+
+                              >>>>> MIST Stellar Evolutionary Track files
+
+            >> Output
+
+                  >>> Data
+
+                        >>>> files output by the code
+
+                  >>> Figures
+
+                        >>>> saved figures
+
+            >> Scripts
+
+                  >>> lrne_search_functions.py
+
+                  >>> progenitor_selection.py
+
+                  >>> Model-Parameter-Selection
+
+                        >>>> 
 
 ## Dependencies
 This list of dependicies does not include their respective dependicies. For information on the dependicies of these packages please see thier respective documentations. It should also be noted that the versions listed have been shown to work, however, other versions of these packages may also work.
 
-> astroML 
+> astroML
+ 
 > astropy
+
 > astroquery
+
 > datetime
+
 > extinction
+
 > matplotlib
+
 > multiprocessing
+
 > numpy
+
 > sklearn
 
 
 ## Known Problems/Issues
+
 > ZTF lightcurve collection is slow.
+
       This is a limitation of the ZTF servers.
