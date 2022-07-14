@@ -1,0 +1,52 @@
+File for input variables of code. 
+
+Structure of the variables: variable descirption
+			    variable_name
+			    value_of_variable
+
+WARNING: > Only change "value_of_variable".
+	 > Each variable must be kept to a single line.
+
+#########
+Variables
+#########
+
+# Do you want to save the created figures (True/False)? 
+fig_save 
+True
+
+# Do you want the created figures to be displayed after creation (True/False)? 
+fig_show
+False
+
+# Training data set path.
+train_data_path
+../Input/Data/Gaia-Data/train_data_set.fits
+
+# Fitting data set path.
+fit_data_path
+../Input/Data/Gaia-Data/fit_data_set.fits
+
+# MIST stellar evoultion tracks data directory.
+mist_data_dir
+../Input/Data/Stellar-Evo-Data/
+
+# Output data save directory.
+data_save_dir
+../Output/Data/
+
+# Figure save directory.
+fig_save_dir
+../Output/Figures/
+
+# Number of components in the GMM (integer).
+num_comp
+9
+
+# Log likelihood value corresponding to approximately GMM's 3 standard deviations.
+thres_log_likeli
+-6.06
+
+# Number of processors to use in multiprocessing.
+num_proc
+4 
