@@ -25,8 +25,8 @@ The aim of the project was to identify luninous red nova (LRN) progenitors using
 
         File Name: input_variables.txt
         
-        Contains: List of input variables such as file paths and directories that correspond to where data should be read from/written to. 
-        You may change the variables within this file.
+        Contains: List of input variables such as file paths and directories that correspond to where data should be read from/written
+        to. You may change the variables within this file.
         
 > Training Data Set:
 
