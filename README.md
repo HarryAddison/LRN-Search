@@ -12,39 +12,68 @@ The aim of the project was to identify luninous red nova (LRN) progenitors using
       Contains the functions used in all other scripts
 
 > progenitor_selection.py:
+
       Contains the code used to model the observational CMD and select LRNe progenitors.
 
 > precursor_selection.py: 
+
       Contains the code used to collect and analyse the progenitors' lightcurve data, and the selection of LRNe precursors.
 
 ## Inputs
 > Input Variables
+
         File Name: input_variables.txt
+        
         Contains: List of input variables such as file paths and directories that correspond to where data should be read from/written to. You may change the variables                   within this file.
         
 > Training Data Set:
+
       File Name: train_data_set.fits
+      
       Contains: Observational data from Gaia DR2 used to train the Gaussian mixture model. This data is provided in the repositry, but if you wish to construct your                   own data set it must consist of the specific columns as outlined below:
+      
                 Column Name : Descrition 
+                
                 > g_mag : Gaia G band apparent magnitude in units of mag.
+                
                 > g_rp : Gaia G-RP colour in units of mag.
+                
                 > plx : Gaia parallax in units of milli-arcesconds (mas).
+                
                 > a_g : Gaia G band extinction in units of mag.
 
 > Fitting Data Set:
+
       File Name: fit_data_set.fits
+      
       Contains: Observational data from Gaia EDR3 used to select the progenitor systems from. This data is provided in the repositry, but if you wish to construct your                 own data set it must consist of the specific columns as outlined below:
+      
                 Column Name : Description
+                
+                > source_id : Gaia DR3 source id.
+                
+                > ra : Gaia right accension in units of .
+                
+                > dec : Gaia declination in units of .
+                
+                > pmra : Gaia right accension proper motion.
+                
+                > pmdec : Gaia declination proper motion.
+                
                 > g_mag : Gaia G band apparent magnitude in units of mag.
+                
                 > g_rp : Gaia G-RP colour in units of mag.
+                
                 > dist : Gaia Bailer-Jones distances in units of parsecs.
-                > 
+                
+                > epoch : Gaia reference epoch in units of years.
 
 > Stellar Evolution Tracks:
+
       Folder Name: Stellar-Evo-Data
+      
       Contains: Stellar evolutionary tracks from MIST.
       
-> 
 
 ## File Structure
 > Project 
