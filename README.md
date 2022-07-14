@@ -49,8 +49,8 @@ The aim of the project was to identify luninous red nova (LRN) progenitors using
 
       File Name: fit_data_set.fits
       
-      Contains: Observational data from Gaia EDR3 used to select the progenitor systems from. This data is provided in the repositry, 
-                but if you wish to construct your own data set it must consist of the specific columns as outlined below:
+      Contains: Observational data from Gaia EDR3 used to select the progenitor systems from. To construct              
+                this data set it must consist of the specific columns as outlined below:
       
                 Column Name : Description
                 
