@@ -14,6 +14,7 @@ Overview:
 
 
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import multiprocessing
@@ -24,6 +25,7 @@ from astropy.table import Table
 from astroquery.gaia import Gaia
 from extinction import fitzpatrick99
 from datetime import datetime
+from ztfquery.lightcurve import LCQuery
 
 
 def ap_abs_mag(ap_mag, plx=0, dist=0, type="plx"):
@@ -277,6 +279,292 @@ def neighbour_limitation(data, num_proc):
             cand_data.add_row(data[i])
         
     return cand_data
+    
+    
+def precursor_selection(progen_data, bandname, error_file_path, data_save_dir,
+                        window_width_percent, outlier_thres, mag_change_rate,
+                        num_points_thres, time_span_thres):
+    '''
+    Used to select the precursors from the progenitor sample.
+    
+    progen_data = table of the progenitor data
+    bandname = ZTF filter band to search for ("g", "i", "r").
+    error_file_path = file to where lightcurve query errors are written.
+    data_save_dir = directory where lightcurve data is saved.
+    window_width_percent = percentage (decimal) of the data used as the 
+                           number of data points per bin. Used for sigma 
+                           clipping and sum of differences calculation.
+    outlier_thres = percentage (decimal) of times a data point needs to
+                    be flagged as an outlier to be removed from the data
+    mag_change_rate = minimum brightening rate for classifing precursors
+    num_points_thres = minimum number of data points in a lightcurve
+                       for the lightcurve to not be discarded.
+    time_span_thres = minimum time span of the lightcure for it to not
+                      be discarded.
+    
+    Outputs:
+        > lc_stage_flag: Flag to identify at which point the lightcurve
+                         was rejected if it was.
+                         Values:
+                            > "Precursor Candidate=True/False: False reasoning"
+                            
+                            > "False: No data"
+                               No lightcurve available.
+                            
+                            > "False: Bad data"
+                               Available data was "bad".
+                            
+                            > "False: Too little data"
+                               Lightcurve did not meet time span and/
+                               or number of data point constraints.
+                            
+                            > "False: Insufficient brightening"
+                               Lightcurve did not meet brightening
+                               requirements.
+                               
+                            > "True"
+                               Lightcurve is of a possible precursor.
+    '''
+    
+    # Obtaining lc data from ZTF.
+    lc_data = lc_query(progen_data["ra"], progen_data["dec"], 
+                       bandname, error_file_path)
+
+    lc_clean_data, lc_stage_flag = lc_clean(lc_data, window_width_percent, 
+                                            outlier_thres, 
+                                            num_points_thres, time_span_thres)
+    
+    # Saving the clean lightcurve data to file and running precursor selection
+    # (only if there is data).
+    if len(lc_clean_data) != 0:
+        lc_clean_data.write("%sZTF-LC-Data/%s_band_%d.fits"
+                            %(data_save_dir, bandname, 
+                              progen_data["source_id"]), 
+                              format="fits", overwrite=True)
+        
+        # Analysis the lightcurve using the sum of differences.
+        (lc_stage_flag, 
+         sum_diff, grad_sum_diff) = lc_analysis(lc_data, window_width_percent,
+                                                mag_change_rate)
+    
+    else:
+        sum_diff = None
+        grad_sum_diff = None
+    
+    return lc_stage_flag, sum_diff, grad_sum_diff
+
+
+def lc_query(ra, dec, bandname, error_file_path):
+    '''
+    Cone search obtaining the lightcurve data of the star at the given
+    position (ra, dec).
+    
+    ra = right accension of star
+    dec = declination of the star
+    bandname = lightcurve filter band to be obtained ("g", "i", "r").
+    error_file_path = file to write errors to.
+    
+    Returns a table containing the lightcurve data.
+    '''
+    
+    query_status = "Incomplete"
+    
+    while query_status == "Incomplete":
+        
+        try:
+            # Querying ZTF for sources within radius = 2 arcsecs of ra, dec.
+            lc = LCQuery.from_position(ra, dec, 2, pos="circle", 
+                                       bandname=bandname)
+            
+            # Check to make sure data is returned as connection can be dropped.
+            # Code will fail to run if the data hasn't been loaded.
+            data_len = len(lc.data)
+            
+            query_status = "Complete"
+            
+        except:
+            # If data is not returned then write error to a file and try again.
+            current_time = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+            
+            with open(error_file_path, "a") as f:
+            
+                f.write("[%s] Source at RA=%s Dec=%s: " 
+                        "Possible loss of connection to ZTF servers\n"
+                        %(current_time, ra, dec))
+            
+            query_status = "Incomplete"
+    
+    # Converting data from pandas dataframe to astropy table
+    lc_data = Table.from_pandas(lc.data)
+
+    return lc_data
+    
+    
+def lc_clean(lc_data, window_width_percent, outlier_thres, 
+             num_points_thres=25, time_span_thres=365):
+    '''
+    Cleaning the lightcurve by applying quality constraints to the
+    individual data points and the entire lightcurve.
+    
+    lc_data = table containing the lightcurve data. 
+    window_width_percent = percentage (decimal) of the data used as the 
+                           number of data points per bin. Used for sigma 
+                           clipping and sum of differences calculation.
+    outlier_thres = percentage (decimal) of times a data point needs to
+                    be flagged as an outlier to be removed from the data
+    num_points_thres = minimum number of data points in a lightcurve
+                       for the lightcurve to not be discarded.
+    time_span_thres = minimum time span of the lightcure for it to not
+                      be discarded.
+                      
+    Returns a table of the cleaned lightcurve.
+    '''
+    # Check to see if the lightcurve has any data, if it does then continue cleaning.
+    if len(lc_data) == 0:
+        lc_stage_flag = "False: No data"
+    
+    else:
+        # Applying quality constraints to lightcurve data points.
+        temp_data = Table(names=lc_data.colnames, dtype=lc_data.dtype)
+        
+        for i in range(len(lc_data)):
+            
+            # Removing data marked by ZTF as bad observations (catflag!=0 are bad)
+            # and data with mag greater than the limiting mag
+            if (lc_data["catflags"][i] 
+                and lc_data["mag"][i] < lc_data["limitmag"][i]):
+                
+                temp_data.add_row(lc_data[i])
+        
+        lc_data = temp_data
+        
+        # Check to see if the lightcurve has any data, if it does then continue cleaning.
+        if len(lc_data) == 0:
+            lc_stage_flag = "False: Bad data"
+    
+        else:
+            # Removing possible outliers using sigma clipping
+            lc_data, lc_outlier_data = remove_outliers(lc_data, 
+                                                       window_width_percent, 
+                                                       outlier_thres)
+                                                       
+            # Check to see if the lightcurve has data, if it does then continue cleaning.
+            if len(lc_data) == 0:
+                lc_stage_flag = "False: Too little data"
+            
+            else:
+                # Applying constriants on the remaining lightcurve data as a whole.
+                # Lightcurves must contain >= 25 data points and span over 1 year.
+                lc_time_span = max(lc_data["mjd"]) - min(lc_data["mjd"])#days
+                
+                if (len(lc_data) < num_points_thres 
+                    and lc_time_span < time_span_thres):
+                    # Failed constraints, setting lc_data to an empty table
+                    lc_data = Table(names=lc_data.colnames,dtype=lc_data.dtype)
+                
+                # Making sure that the data is in chronological order.
+                lc_data.sort("mjd")
+                
+                # Check to see if the lightcurve has any data.
+                if len(lc_data) == 0: 
+                    lc_stage_flag = "False: Too little data"
+                else:
+                    # If still data don't give flag value as sum of diff to be done next.
+                    lc_stage_flag = None
+    
+    return lc_data, lc_stage_flag
+
+    
+def remove_outliers(data, window_width_percent, outlier_thres):
+    '''
+    Remove outliers from a lightcurve using sigma cipping.
+    
+    data = table of lightcurve data.
+    window_width_percent = percentage (decimal) of the data used as the 
+                           number of data points per bin. Used for sigma 
+                           clipping and sum of differences calculation.
+    outlier_thres = percentage (decimal) of times a data point needs to
+                    be flagged as an outlier to be removed from the data
+    
+    Returns tables of the non-outlier data and the outlier data.
+    '''
+    
+    n = len(data)
+    
+    # bin size for the rolling window.
+    bin_size = math.ceil(n * window_width_percent)
+    
+    outlier_flags = [ [] for _ in range(n) ]
+    
+    # going through each rolling window and flagging potential outliers.
+    for i in range(n - bin_size + 1):
+        # data in the window.
+        win_data = data[i : (i + bin_size)]
+        
+        win_mag_mean = np.mean(win_data["mag"])
+        
+        win_std_dev = np.sqrt((1/len(win_data["mag"])) * 
+                               sum((win_data["mag"] - win_mag_mean)**2))
+        
+        for j in range(bin_size):
+            # flagging data that is outside of 3 standard deviations of the mean.
+            if (win_data["mag"][j] < (win_mag_mean + 3 * win_std_dev) 
+                and win_data["mag"][j] > (win_mag_mean - 3 * win_std_dev)):
+                
+                outlier_flags[i+j].append(0)
+            
+            else:
+                outlier_flags[i+j].append(1)
+    
+    outlier_data = Table(names=data.colnames, dtype= data.dtype)
+    non_outlier_data = Table(names=data.colnames, dtype= data.dtype)
+    
+    # Removing data that has been flagged more than the outlier_thres.
+    for i in range(n):
+    
+        if np.mean(outlier_flags[i]) < outlier_thres:
+            non_outlier_data.add_row(data[i])
+            
+        else:
+            outlier_data.add_row(data[i])
+    
+    return non_outlier_data, outlier_data
+    
+    
+def lc_analysis(lc_data, window_width_percent, mag_change_rate):
+    '''
+    Applying sum of differences method to the lightcurve to determine
+    if the rate of brightening is precursor like.
+    
+    lc_data = table of the lightcurve data.
+    window_width_percent = percentage (decimal) of the data used as the 
+                           number of data points per bin. Used for sigma 
+                           clipping and sum of differences calculation.
+    mag_change_rate = minimum brightening rate for classifing precursors                   
+    '''
+    # Calculatinf the rolling mean
+    n = len(lc_data)
+    bin_size = math.ceil(n*window_width_percent)
+    
+    mjd_means = np.array([np.mean((lc_data["mjd"][i : (i + bin_size)])) 
+                          for i in range(n - bin_size + 1)])
+                 
+    mag_means = np.array([np.mean((lc_data["mag"][i : (i + bin_size)])) 
+                          for i in range(n - bin_size + 1)])
+    
+    
+    # Calculating sum (and its gradient) of differences between means
+    sum_diff = sum(mag_means[1:] - mag_means[:-1])
+    grad_sum_diff = (sum_diff / (max(mjd_means)- min(mjd_means)))
+    
+    # Applying the rate of change requirement to the grad_sum_diff
+    if grad_sum_diff < mag_change_rate:
+        lc_stage_flag = "True"
+    
+    else: 
+        lc_stage_flag = "False: Insufficient brightening"
+    
+    return lc_stage_flag, sum_diff, grad_sum_diff
     
 
 def plot_evo_tracks(ax, dir, linestyles=[], colors=[]):
@@ -538,3 +826,40 @@ def plot_model(train_data, model, num_comp):
     plt.colorbar(im, label="Density")
         
     return fig
+    
+    
+def plot_lc(data, bands):
+    '''
+    Plotting the given lightcurve.
+    
+    data = array of lightcurve tables.
+    bands = array of the lightcurve filter bands ("g", "i", "r").
+    '''
+    
+    fig = plt.figure(figsize=(6, 6))
+    ax = plt.subplot(111)
+    
+    for i in range(len(data)):
+        
+        if bands[i] == "g":
+            ax.errorbar(data[i]["hjd"], data[i]["mag"], data[i]["magerr"], 
+                        fmt=" ", marker = "o", markersize=3, 
+                        c="green", label="g-band")
+        
+        if bands[i] == "i":
+            ax.errorbar(data[i]["hjd"], data[i]["mag"], data[i]["magerr"], 
+                        fmt=" ", marker = "o", markersize=3, c="indigo", 
+                        label="i-band")
+        
+        if bands[i] == "r":
+            ax.errorbar(data[i]["hjd"], data[i]["mag"], data[i]["magerr"], 
+                        fmt=" ", marker = "o", markersize=3, c="red", 
+                        label="r-band")
+    
+    ax.legend()
+    
+    plt.gca().invert_yaxis()
+    plt.xlabel("HJD (days)")
+    plt.ylabel("Apparent Magnitude (mag)")
+    
+    return fig, ax

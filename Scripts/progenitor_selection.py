@@ -7,6 +7,8 @@ License: MIT License
 Overview:
         Code used to perform a search for the next Galactic 
         luminous red nova.
+        This code is used to produce a sample of candidate luminous red
+        novae progenitors.        
         Full method is explained in the paper "Searching for the Next
         Galactic Luminous Red Nova, Harry Addison et. al" 
        (https://ui.adsabs.harvard.edu/abs/2022arXiv220607070A/abstract).
@@ -24,6 +26,7 @@ if __name__ == "__main__":
     from astropy.table import Table
     from extinction import fitzpatrick99
     
+    
     '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     # Recording the start time
@@ -33,19 +36,19 @@ if __name__ == "__main__":
     with open("../Input/input_variables.txt") as f:
         lines = f.readlines()
         
-        fig_save = eval(lines[15].split("\n")[0])
-        fig_show = eval(lines[19].split("\n")[0])
+        fig_save = eval(lines[16].split("\n")[0])
+        fig_show = eval(lines[21].split("\n")[0])
         
-        train_data_path = str(lines[23].split("\n")[0])
-        fit_data_path = str(lines[27].split("\n")[0])
-        mist_data_dir = str(lines[31].split("\n")[0])
+        train_data_path = str(lines[35].split("\n")[0])
+        fit_data_path = str(lines[39].split("\n")[0])
+        mist_data_dir = str(lines[47].split("\n")[0])
         
-        data_save_dir = str(lines[35].split("\n")[0])
-        fig_save_dir = str(lines[39].split("\n")[0])
+        data_save_dir = str(lines[51].split("\n")[0])
+        fig_save_dir = str(lines[55].split("\n")[0])
         
-        num_comp = int(lines[43].split("\n")[0])
-        thres_log_likeli = float(lines[47].split("\n")[0])
-        num_proc = int(lines[51].split("\n")[0])
+        num_comp = int(lines[59].split("\n")[0])
+        thres_log_likeli = float(lines[63].split("\n")[0])
+        num_proc = int(lines[67].split("\n")[0])
     
     # Printing input variables to screen
     print(
@@ -72,7 +75,7 @@ if __name__ == "__main__":
     '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     # Loading in the training data.
-    train_data = Table.read(train_data_path)[:100]
+    train_data = Table.read(train_data_path)
     
     # Applying nessassary corrections due to known issues with Gaia DR2 data.
     for i in range(len(train_data)):
@@ -125,7 +128,7 @@ if __name__ == "__main__":
     fig, ax = lsf.plot_cmd_train(train_data, mist_data_dir)
     
     if fig_save == True:
-        plt.savefig("%sCMD_Training_Data.pdf" %(fig_save_dir), 
+        plt.savefig("%sCMD_Training_Data.png" %(fig_save_dir), 
                     dpi=fig.dpi)
 
     if fig_show == True:
@@ -153,7 +156,7 @@ if __name__ == "__main__":
     lsf.plot_model(train_data, model, num_comp)
     
     if fig_save == True:
-        plt.savefig("%sModel.pdf" %(fig_save_dir), dpi=fig.dpi)
+        plt.savefig("%sModel.png" %(fig_save_dir), dpi=fig.dpi)
     
     if fig_show == True:
         plt.show()
@@ -161,7 +164,7 @@ if __name__ == "__main__":
     '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     # Loading the fitting data set
-    fit_data = Table.read(fit_data_path)[:100000]
+    fit_data = Table.read(fit_data_path)
     
     # Converting apparent to absoulte magnitudes.
     fit_data["g_mag"] = lsf.ap_abs_mag(fit_data["g_mag"], 
@@ -198,7 +201,7 @@ if __name__ == "__main__":
     fig = lsf.plot_cmd_likeli(fit_data, model, thres_log_likeli)
     
     if fig_save == True:
-        plt.savefig("%sCMD_Scores.pdf" %(fig_save_dir), dpi=fig.dpi)
+        plt.savefig("%sCMD_Scores.png" %(fig_save_dir), dpi=fig.dpi)
     
     if fig_show == True:
         plt.show()
@@ -207,11 +210,13 @@ if __name__ == "__main__":
     fig, ax = lsf.plot_cmd_cand(cand_data, mist_data_dir)
     
     if fig_save == True:
-        plt.savefig("%sCMD_Progenitors.pdf" %(fig_save_dir), dpi=fig.dpi)
+        plt.savefig("%sCMD_Progenitors.png" %(fig_save_dir), dpi=fig.dpi)
     
     if fig_show == True:
         plt.show()
-    
+        
+    '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
+    '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     print(
     '''
     %s
@@ -219,8 +224,6 @@ if __name__ == "__main__":
     '''
     %(datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
     
-    '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
-    '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     # Converting positions from the gaia epoch to J2000.
     cand_data["ra"] = (cand_data["ra"] - 
                        ((cand_data["epoch"] - 2000) * 
@@ -247,16 +250,21 @@ if __name__ == "__main__":
     '''~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~'''
     # Saving data sets
     # Training data with corrections
-    train_data.write("%strain_data_set_altered.fits"%(data_save_dir), 
+    train_data.write("%strain_data_set_corrections.fits"%(data_save_dir), 
                      format="fits", overwrite=True)
         
     fit_data.write("%sfit_data_set_altered.fits"%(data_save_dir), 
                    format="fits", overwrite=True)
     
-    cand_data.write("%scand_data_set.fits"%(data_save_dir), 
+    cand_data.write("%sprogen_data_set.fits"%(data_save_dir), 
                     format="fits", overwrite=True)
     
-    ztf_cand_data.write("%sztf_cand_data_set.fits"%(data_save_dir), 
+    ztf_cand_data.write("%ssingle_progen_data_set.fits"%(data_save_dir), 
                         format="fits", overwrite=True)
-    
-    
+                        
+    print(
+    '''
+    %s
+    All data saved.
+    '''
+    %(datetime.now().strftime("%d/%m/%Y %H:%M:%S")))
