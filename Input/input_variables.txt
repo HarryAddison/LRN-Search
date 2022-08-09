@@ -11,12 +11,24 @@ WARNING: > Only change "value_of_variable".
 Variables
 #########
 
-# Do you want to save the created figures (True/False)? 
+# Do you want to save the created figures from the code 
+# "progenitor_selection.py"(True/False)? 
 fig_save 
 True
 
-# Do you want the created figures to be displayed after creation (True/False)? 
+# Do you want to display the created figures from the code 
+# "progenitor_selection.py" (True/False)? 
 fig_show
+False
+
+# Do you want to save the created figures from the code 
+# "precursor_selection.py"(True/False)? 
+lc_fig_save
+True
+
+# Do you want to display the created figures from the code 
+# "precursor_selection.py" (True/False)? 
+lc_fig_show
 False
 
 # Training data set path.
@@ -26,6 +38,10 @@ train_data_path
 # Fitting data set path.
 fit_data_path
 ../Input/Data/Gaia-Data/fit_data_set.fits
+
+#
+error_file_path
+../Output/ZTF_Errors.txt
 
 # MIST stellar evoultion tracks data directory.
 mist_data_dir
@@ -49,4 +65,24 @@ thres_log_likeli
 
 # Number of processors to use in multiprocessing.
 num_proc
-4 
+4
+
+# 
+window_width_percent
+0.3
+
+#
+outlier_thres
+0.5
+
+#
+mag_change_rate
+-0.0002
+
+#
+num_points_thres
+25
+
+#
+time_span_thres
+365
